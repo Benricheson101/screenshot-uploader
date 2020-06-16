@@ -29,8 +29,8 @@ config_location=${1:-"$HOME/.config/screenshot-uploader/config.sxcu"}
 tempfile=$(mktemp /tmp/screenshot_uploader.XXXXX)
 cat /dev/stdin > "$tempfile"
 
-config="$(cat "$config_location")"
-  
+config=$(cat "$config_location")
+
 request_url=$(jq -r '.RequestURL' <<< "$config")
 response_url=$(jq -r '.URL' <<< "$config")
 authorization="Authorization: $(jq -r '.Headers.Authorization' <<< "$config")"
@@ -40,9 +40,9 @@ file_form_name=$(jq -r '.FileFormName' <<< "$config")
 
 response=$(curl -sSL -X POST -F "$file_form_name=@$tempfile;type=image/png" -H "Content-Type: Multipart/form-data" -H "$authorization" "$request_url");
 
-rm "$tempfile"
+rm $tempfile
 
-[[ -z "$response" ]] && { notify-send -u critical 'Screenshot Upload Error' 'The server returned null or did not respond in time' ; exit 1 ; }
+[[ -z $response ]] && { notify-send -u critical 'Screenshot Upload Error' 'The server returned null or did not respond in time' ; exit 1 ; }
 
 count=1
 for key in $(rg -o '\$json:(.*?)\$' -r '$'$count <<< "$response_url")
@@ -51,8 +51,8 @@ do
   ((count++))
 done
 
-echo -n "$response_url" | xclip -selection clipboard
-notify-send -u normal 'Screenshot Uploaded' "$response_url"
+echo -n $response_url | xclip -selection clipboard
+notify-send -u normal 'Screenshot Uploaded' $response_url
 echo -n "$response_url"
 
 # vim:syntax=sh
