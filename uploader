@@ -49,7 +49,7 @@ count=1
 for key in $(rg -o '\$json:(.*?)\$' -r "\$$count" <<< "$response_url")
 do
   data=$(jq -r ".$key" <<< "$response")
-  to_match="\\\$json:${key}\\\$"
+  to_match="\\\$json:$key\\\$"
   response_url=$(sed "s/$to_match/$data/" <<< "$response_url")
 
   ((count++))
