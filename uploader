@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/usr/bin/env bash
 
 #
 # DESCRIPTION:
@@ -11,6 +11,7 @@
 # REQUIREMENTS:
 # ripgrep - https://github.com/BurntSushi/ripgrep
 # xclip - https://github.com/astrand/xclip
+# imagemagick - https://imagemagick.org
 #
 # USAGE:
 # uploader [CONFIG]
@@ -38,21 +39,28 @@ file_form_name=$(jq -r '.FileFormName' <<< "$config")
 
 [[ ! -s "$tempfile" ]] && exit 1;
 
-response=$(curl -sSL -X POST -F "$file_form_name=@$tempfile;type=image/png" -H "Content-Type: Multipart/form-data" -H "$authorization" "$request_url");
+cat $tempfile | xclip -sel clip -t image/png
 
-rm $tempfile
+response=$(curl -sSL -X POST -F "$file_form_name=@$tempfile;type=image/png" -H "Content-Type: Multipart/form-data" -H "$authorization" "$request_url");
 
 [[ -z $response ]] && { notify-send -u critical 'Screenshot Upload Error' 'The server returned null or did not respond in time' ; exit 1 ; }
 
 count=1
-for key in $(rg -o '\$json:(.*?)\$' -r '$'$count <<< "$response_url")
+for key in $(rg -o '\$json:(.*?)\$' -r "\$$count" <<< "$response_url")
 do
-  response_url=$(echo "$response_url" | sed 's/\$json:'"$key"'\$/'"$(jq -r ".$key" <<< "$response")/")
+  data=$(jq -r ".$key" <<< "$response")
+  to_match="\\\$json:${key}\\\$"
+  response_url=$(sed "s/$to_match/$data/" <<< "$response_url")
+
   ((count++))
 done
 
+convert $tempfile -resize 32x32 $tempfile
+
 echo -n $response_url | xclip -selection clipboard
-notify-send -u normal 'Screenshot Uploaded' $response_url
+notify-send -u normal 'Screenshot Uploaded' $response_url -i $tempfile
 echo -n "$response_url"
+
+rm $tempfile
 
 # vim:syntax=sh
